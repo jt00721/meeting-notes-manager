@@ -16,3 +16,10 @@ type Note struct {
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime"`
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }
+
+type NoteFilter struct {
+	Keyword  string
+	Category string
+	FromDate *time.Time
+	ToDate   *time.Time
+}

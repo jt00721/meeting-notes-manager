@@ -13,4 +13,5 @@ func SetupRoutes(r *gin.Engine, noteHandler *handler.NoteHandler) {
 	r.PUT("/notes/:id", noteHandler.UpdateNoteApi)
 	r.DELETE("/notes/:id", noteHandler.DeleteNoteApi)
 	r.GET("/notes/search", noteHandler.SearchNotesByKeywordApi)
+	r.GET("/notes/filter", noteHandler.FilterNotesApi)
 }

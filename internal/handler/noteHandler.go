@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jt00721/meeting-notes-manager/internal/domain"
@@ -222,4 +223,58 @@ func (handler *NoteHandler) SearchNotesByKeywordApi(c *gin.Context) {
 
 	log.Println("Successfully retrieved search results")
 	c.JSON(http.StatusOK, searchResults)
+}
+
+func (handler *NoteHandler) FilterNotesApi(c *gin.Context) {
+	keyword := c.Query("keyword")
+	category := c.Query("category")
+	fromDateStr := c.Query("fromDate")
+	toDateStr := c.Query("toDate")
+
+	var fromDatePtr, toDatePtr *time.Time
+
+	if fromDateStr != "" {
+		fromDate, err := time.Parse("2006-01-02", fromDateStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid fromDate format. Use YYYY-MM-DD."})
+			return
+		}
+		fromDatePtr = &fromDate
+	}
+
+	if toDateStr != "" {
+		toDate, err := time.Parse("2006-01-02", toDateStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid toDate format. Use YYYY-MM-DD."})
+			return
+		}
+		toDatePtr = &toDate
+	}
+
+	filter := domain.NoteFilter{
+		Keyword:  keyword,
+		Category: category,
+		FromDate: fromDatePtr,
+		ToDate:   toDatePtr,
+	}
+
+	filterResults, err := handler.Usecase.FilterNotes(filter)
+	if err != nil {
+		log.Printf("Error filtering search results: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to filter search results. Please try again later.",
+		})
+		return
+	}
+
+	if len(filterResults) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No notes match filter criteria",
+			"notes":   filterResults,
+		})
+		return
+	}
+
+	log.Println("Successfully filtered search results")
+	c.JSON(http.StatusOK, filterResults)
 }

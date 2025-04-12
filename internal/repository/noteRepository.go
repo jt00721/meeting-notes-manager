@@ -13,6 +13,7 @@ type NoteRepository interface {
 	Update(n *domain.Note) error
 	Delete(id uint) error
 	Search(keyword string) ([]domain.Note, error)
+	Filter(filter domain.NoteFilter) ([]domain.Note, error)
 }
 
 type noteRepository struct {
@@ -58,5 +59,31 @@ func (r *noteRepository) Search(keyword string) ([]domain.Note, error) {
 	err := r.DB.
 		Where("title ILIKE ? OR content ILIKE ?", "%"+keyword+"%", "%"+keyword+"%").
 		Find(&notes).Error
+	return notes, err
+}
+
+func (r *noteRepository) Filter(filter domain.NoteFilter) ([]domain.Note, error) {
+	var notes []domain.Note
+
+	tx := r.DB // Start building the query
+
+	if filter.Keyword != "" {
+		like := "%" + filter.Keyword + "%"
+		tx = tx.Where("title ILIKE ? OR content ILIKE ?", like, like)
+	}
+
+	if filter.Category != "" {
+		tx = tx.Where("category = ?", filter.Category)
+	}
+
+	if filter.FromDate != nil {
+		tx = tx.Where("meeting_date >= ?", *filter.FromDate)
+	}
+
+	if filter.ToDate != nil {
+		tx = tx.Where("meeting_date <= ?", *filter.ToDate)
+	}
+
+	err := tx.Find(&notes).Error
 	return notes, err
 }

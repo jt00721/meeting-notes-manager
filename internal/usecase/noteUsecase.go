@@ -19,6 +19,7 @@ type NoteUsecase interface {
 	UpdateNote(n *domain.Note) error
 	DeleteNote(id uint) error
 	SearchNotesByKeyword(keyword string) ([]domain.Note, error)
+	FilterNotes(filter domain.NoteFilter) ([]domain.Note, error)
 }
 
 type noteUsecase struct {
@@ -154,4 +155,29 @@ func (uc *noteUsecase) SearchNotesByKeyword(keyword string) ([]domain.Note, erro
 
 	log.Println("Successful Search")
 	return searchResult, nil
+}
+
+func (uc *noteUsecase) FilterNotes(filter domain.NoteFilter) ([]domain.Note, error) {
+	filter.Keyword = strings.TrimSpace(filter.Keyword)
+
+	filter.Category = strings.TrimSpace(filter.Category)
+
+	if filter.FromDate != nil && filter.ToDate != nil {
+		if filter.FromDate.After(*filter.ToDate) {
+			return nil, fmt.Errorf("fromDate must be before toDate")
+		}
+	}
+
+	filterResults, err := uc.repo.Filter(filter)
+	if err != nil {
+		log.Printf("Error filtering for notes: %v", err)
+		return nil, fmt.Errorf("failed to filter notes")
+	}
+
+	sort.Slice(filterResults, func(i, j int) bool {
+		return filterResults[i].MeetingDate.After(filterResults[j].MeetingDate)
+	})
+
+	log.Println("Successful Filter")
+	return filterResults, nil
 }
