@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jt00721/meeting-notes-manager/internal/domain"
@@ -67,6 +68,45 @@ func (handler *NoteHandler) GetAllNotesApi(c *gin.Context) {
 	}
 
 	log.Println("Successfully retrieved all notes")
+	c.JSON(http.StatusOK, notes)
+}
+
+func (handler *NoteHandler) GetPaginatedNotesApi(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "10")
+	offsetStr := c.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		log.Printf("Error converting limit URL query: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit"})
+		return
+	}
+
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil {
+		log.Printf("Error converting offset URL query: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset"})
+		return
+	}
+
+	notes, err := handler.Usecase.GetPaginatedNotes(limit, offset)
+	if err != nil {
+		log.Printf("Error retrieving all notes (paginated): %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve all notes. Please try again later.",
+		})
+		return
+	}
+
+	if len(notes) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No notes found",
+			"notes":   notes,
+		})
+		return
+	}
+
+	log.Println("Successfully retrieved all notes (paginated)")
 	c.JSON(http.StatusOK, notes)
 }
 
@@ -153,4 +193,33 @@ func (handler *NoteHandler) DeleteNoteApi(c *gin.Context) {
 
 	log.Println("Successfully deleted note")
 	c.JSON(http.StatusOK, gin.H{"message": "Note deleted"})
+}
+
+func (handler *NoteHandler) SearchNotesByKeywordApi(c *gin.Context) {
+	keyword := c.Query("keyword")
+
+	if strings.TrimSpace(keyword) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Search keyword is required"})
+		return
+	}
+
+	searchResults, err := handler.Usecase.SearchNotesByKeyword(keyword)
+	if err != nil {
+		log.Printf("Error retrieving search results: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to retrieve search results. Please try again later.",
+		})
+		return
+	}
+
+	if len(searchResults) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "No notes match search criteria",
+			"notes":   searchResults,
+		})
+		return
+	}
+
+	log.Println("Successfully retrieved search results")
+	c.JSON(http.StatusOK, searchResults)
 }

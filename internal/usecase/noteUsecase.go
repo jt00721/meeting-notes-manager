@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 
 	"github.com/jt00721/meeting-notes-manager/internal/domain"
 	"github.com/jt00721/meeting-notes-manager/internal/repository"
@@ -13,9 +14,11 @@ import (
 type NoteUsecase interface {
 	CreateNote(n *domain.Note) error
 	GetAllNotes() ([]domain.Note, error)
+	GetPaginatedNotes(limit, offset int) ([]domain.Note, error)
 	GetNoteByID(id uint) (domain.Note, error)
 	UpdateNote(n *domain.Note) error
 	DeleteNote(id uint) error
+	SearchNotesByKeyword(keyword string) ([]domain.Note, error)
 }
 
 type noteUsecase struct {
@@ -56,6 +59,21 @@ func (uc *noteUsecase) GetAllNotes() ([]domain.Note, error) {
 	})
 
 	log.Println("All notes retrieved successfully")
+	return notes, nil
+}
+
+func (uc *noteUsecase) GetPaginatedNotes(limit, offset int) ([]domain.Note, error) {
+	notes, err := uc.repo.GetPaginated(limit, offset)
+	if err != nil {
+		log.Println("Error retrieving paginated notes:", err)
+		return nil, fmt.Errorf("failed to get notes")
+	}
+
+	sort.Slice(notes, func(i, j int) bool {
+		return notes[i].MeetingDate.After(notes[j].MeetingDate)
+	})
+
+	log.Println("Paginated notes retrieved successfully")
 	return notes, nil
 }
 
@@ -117,4 +135,23 @@ func (uc *noteUsecase) DeleteNote(id uint) error {
 
 	log.Println("Note deleted successfully")
 	return nil
+}
+
+func (uc *noteUsecase) SearchNotesByKeyword(keyword string) ([]domain.Note, error) {
+	if strings.TrimSpace(keyword) == "" {
+		return nil, fmt.Errorf("search keyword cannot be empty")
+	}
+
+	searchResult, err := uc.repo.Search(keyword)
+	if err != nil {
+		log.Printf("Error searching for notes with keyword (%s): %v", keyword, err)
+		return nil, fmt.Errorf("failed to find notes")
+	}
+
+	sort.Slice(searchResult, func(i, j int) bool {
+		return searchResult[i].MeetingDate.After(searchResult[j].MeetingDate)
+	})
+
+	log.Println("Successful Search")
+	return searchResult, nil
 }

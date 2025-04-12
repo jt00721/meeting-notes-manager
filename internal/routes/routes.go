@@ -8,7 +8,9 @@ import (
 func SetupRoutes(r *gin.Engine, noteHandler *handler.NoteHandler) {
 	r.POST("/notes", noteHandler.CreateNoteApi)
 	r.GET("/notes", noteHandler.GetAllNotesApi)
+	r.GET("/notes/paginated", noteHandler.GetPaginatedNotesApi)
 	r.GET("/notes/:id", noteHandler.GetNoteByIDApi)
 	r.PUT("/notes/:id", noteHandler.UpdateNoteApi)
 	r.DELETE("/notes/:id", noteHandler.DeleteNoteApi)
+	r.GET("/notes/search", noteHandler.SearchNotesByKeywordApi)
 }
