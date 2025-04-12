@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -28,11 +29,11 @@ func (handler *NoteHandler) CreateNoteApi(c *gin.Context) {
 
 	err := handler.Usecase.CreateNote(&note)
 	if err != nil {
-		if err.Error() == "note title cannot be empty" {
+		if errors.Is(err, usecase.ErrEmptyTitle) {
 			log.Println("Error: Cannot create note without title")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "note title cannot be empty"})
 			return
-		} else if err.Error() == "note content cannot be empty" {
+		} else if errors.Is(err, usecase.ErrEmptyContent) {
 			log.Println("Error: Cannot create note without content")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "note content cannot be empty"})
 			return
@@ -110,11 +111,11 @@ func (handler *NoteHandler) UpdateNoteApi(c *gin.Context) {
 	note.ID = uint(id)
 	err = handler.Usecase.UpdateNote(&note)
 	if err != nil {
-		if err.Error() == "note title cannot be empty" {
+		if errors.Is(err, usecase.ErrEmptyTitle) {
 			log.Println("Error: Cannot create note without title")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "note title cannot be empty"})
 			return
-		} else if err.Error() == "note content cannot be empty" {
+		} else if errors.Is(err, usecase.ErrEmptyContent) {
 			log.Println("Error: Cannot create note without content")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "note content cannot be empty"})
 			return
@@ -139,6 +140,12 @@ func (handler *NoteHandler) DeleteNoteApi(c *gin.Context) {
 
 	err = handler.Usecase.DeleteNote(uint(id))
 	if err != nil {
+		if errors.Is(err, usecase.ErrNoteNotFound) {
+			log.Println("Error: Cannot retrieve note with ID:", id)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "note not found"})
+			return
+		}
+
 		log.Printf("Error deleting note with ID(%d): %v", id, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete note. Please try again later."})
 		return

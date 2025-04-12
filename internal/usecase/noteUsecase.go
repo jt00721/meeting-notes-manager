@@ -28,11 +28,11 @@ func NewNoteUsecase(r repository.NoteRepository) *noteUsecase {
 
 func (uc *noteUsecase) CreateNote(n *domain.Note) error {
 	if n.Title == "" {
-		return fmt.Errorf("note title cannot be empty")
+		return ErrEmptyTitle
 	}
 
 	if n.Content == "" {
-		return fmt.Errorf("note content cannot be empty")
+		return ErrEmptyContent
 	}
 
 	if err := uc.repo.Create(n); err != nil {
@@ -63,7 +63,7 @@ func (uc *noteUsecase) GetNoteByID(id uint) (domain.Note, error) {
 	note, err := uc.repo.GetByID(id)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return domain.Note{}, fmt.Errorf("note not found")
+			return domain.Note{}, ErrNoteNotFound
 		}
 		log.Printf("Error retrieving note with ID(%d): %v", id, err)
 		return domain.Note{}, fmt.Errorf("failed to retrieve note")
@@ -77,15 +77,15 @@ func (uc *noteUsecase) UpdateNote(n *domain.Note) error {
 	existingNote, err := uc.GetNoteByID(n.ID)
 	if err != nil {
 		log.Println("Error retrieving note while trying to update note:", err)
-		return fmt.Errorf("failed to retrieve existing note")
+		return ErrNoteNotFound
 	}
 
 	if n.Title == "" {
-		return fmt.Errorf("note title cannot be empty")
+		return ErrEmptyTitle
 	}
 
 	if n.Content == "" {
-		return fmt.Errorf("note content cannot be empty")
+		return ErrEmptyContent
 	}
 
 	existingNote.Title = n.Title
@@ -106,7 +106,7 @@ func (uc *noteUsecase) UpdateNote(n *domain.Note) error {
 func (uc *noteUsecase) DeleteNote(id uint) error {
 	if _, err := uc.GetNoteByID(id); err != nil {
 		log.Println("Error: Tried to delete non-existing note with ID:", id)
-		return fmt.Errorf("note not found")
+		return ErrNoteNotFound
 	}
 
 	err := uc.repo.Delete(id)
