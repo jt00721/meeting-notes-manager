@@ -263,13 +263,4 @@ func TestFilter(t *testing.T) {
 			assert.Len(t, searchResults, tt.wantLen)
 		})
 	}
-	// searchResults, err := testRepo.Filter(domain.NoteFilter{
-	// 	Keyword:  "Keyword",
-	// 	Category: "",
-	// 	FromDate: nil,
-	// 	ToDate:   nil,
-	// })
-	// assert.NoError(t, err)
-	// assert.Len(t, searchResults, 1)
-	// assert.Equal(t, searchResults[0].Content, "Keyword in notes")
 }
