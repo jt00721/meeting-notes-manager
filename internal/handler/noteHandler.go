@@ -183,7 +183,7 @@ func (handler *NoteHandler) DeleteNoteApi(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, usecase.ErrNoteNotFound) {
 			log.Println("Error: Cannot retrieve note with ID:", id)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "note not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": "note not found"})
 			return
 		}
 
