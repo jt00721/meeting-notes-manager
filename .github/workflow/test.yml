@@ -1,0 +1,73 @@
+name: Run Go Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: ${{ secrets.POSTGRES_TEST_DB }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_TEST_DB: ${{ secrets.POSTGRES_TEST_DB }}
+      GOMAXPROCS: 1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Wait for Postgres to be ready
+        run: |
+          for i in {1..10}; do
+            pg_isready -h localhost -p 5432 && break
+            echo "Waiting for PostgreSQL..."
+            sleep 3
+          done
+
+      - name: Install PostgreSQL CLI
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Create test database (if not exists)
+        run: |
+          PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U $POSTGRES_USER -tc "SELECT 1 FROM pg_database WHERE datname = '$POSTGRES_TEST_DB'" | grep -q 1 || \
+          PGPASSWORD=$POSTGRES_PASSWORD createdb -h localhost -U $POSTGRES_USER $POSTGRES_TEST_DB
+
+      - name: Run all tests
+        run: go test -v ./...
